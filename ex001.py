@@ -1,29 +1,171 @@
- from tkinter import *
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Atendimento</title>
+    <style>
+        :root {
+            --primary: #6DC3BB;
+            --secondary: #393D7E;
+            --accent: #5459AC;
+            --highlight: #F2AEBB;
+        }
 
-# Criar janela principal
-janela = Tk()
-janela.title("Teste")
-janela.geometry("400x200")
+        * { box-sizing: border-box; font-family: Arial, sans-serif; }
 
-# Cores (senão dá erro)
-co1 = "white"
-co4 = "black"
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, var(--primary), var(--highlight));
+            padding: 30px;
+        }
 
-# Criar frame
-frame_detalhes = Frame(janela, bg=co1)
-frame_detalhes.pack(fill="both", expand=True)
+        h2 {
+            color: var(--secondary);
+        }
 
-# Criando campos
-l_nome = Label(frame_detalhes, text='Nome *',
-               height=1, anchor=NW,
-               font=('Ivy', 10),
-               bg=co1, fg=co4)
-l_nome.place(x=4, y=10)
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
 
-e_nome = Entry(frame_detalhes, width=45,
-               justify='left', relief='solid')
-e_nome.place(x=7, y=40)
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
 
-# Manter janela aberta
-janela.mainloop()
+        input {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
 
+        button {
+            margin-top: 15px;
+            padding: 10px;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: var(--accent);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .search-box {
+            margin-top: 20px;
+        }
+
+        .result {
+            background: var(--highlight);
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Cadastro de Atendimento</h2>
+
+    <div class="form-grid">
+        <input type="text" id="nome" placeholder="Nome">
+        <input type="email" id="email" placeholder="E-mail">
+        <input type="text" id="documento" placeholder="CPF/CNPJ">
+        <input type="text" id="motivo" placeholder="Motivo">
+        <input type="text" id="submotivo" placeholder="Sub-Motivo">
+        <input type="date" id="data">
+    </div>
+
+    <button onclick="adicionarRegistro()">Salvar Registro</button>
+
+    <div class="search-box">
+        <h3>Localizar Registro (tipo PROCV)</h3>
+        <input type="text" id="busca" placeholder="Digite Nome, CPF ou Protocolo">
+        <button onclick="buscarRegistro()">Buscar</button>
+        <div class="result" id="resultado"></div>
+    </div>
+
+    <table id="tabela">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>E-mail</th>
+                <th>CPF/CNPJ</th>
+                <th>Motivo</th>
+                <th>Sub-Motivo</th>
+                <th>Data</th>
+                <th>Protocolo</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+    let registros = [];
+
+    function gerarProtocolo() {
+        return 'PROTO-' + Math.floor(Math.random() * 1000000);
+    }
+
+    function adicionarRegistro() {
+        const nome = document.getElementById('nome').value;
+        const email = document.getElementById('email').value;
+        const documento = document.getElementById('documento').value;
+        const motivo = document.getElementById('motivo').value;
+        const submotivo = document.getElementById('submotivo').value;
+        const data = document.getElementById('data').value;
+        const protocolo = gerarProtocolo();
+
+        const registro = { nome, email, documento, motivo, submotivo, data, protocolo };
+        registros.push(registro);
+
+        const tabela = document.querySelector('#tabela tbody');
+        const linha = tabela.insertRow();
+
+        Object.values(registro).forEach(valor => {
+            const celula = linha.insertCell();
+            celula.textContent = valor;
+        });
+
+        alert('Registro salvo com sucesso! Protocolo: ' + protocolo);
+    }
+
+    function buscarRegistro() {
+        const termo = document.getElementById('busca').value.toLowerCase();
+        const resultadoDiv = document.getElementById('resultado');
+
+        const encontrado = registros.find(r =>
+            r.nome.toLowerCase().includes(termo) ||
+            r.documento.includes(termo) ||
+            r.protocolo.toLowerCase().includes(termo)
+        );
+
+        if (encontrado) {
+            resultadoDiv.style.display = 'block';
+            resultadoDiv.innerHTML =
