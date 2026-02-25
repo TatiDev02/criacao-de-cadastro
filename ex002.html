@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Atendimento</title>
+    <style>
+        :root {
+            --primary: #6DC3BB;
+            --secondary: #393D7E;
+            --accent: #5459AC;
+            --highlight: #F2AEBB;
+        }
+
+        * { box-sizing: border-box; font-family: Arial, sans-serif; }
+
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, var(--primary), var(--highlight));
+            padding: 30px;
+        }
+
+        h2 { color: var(--secondary); }
+
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        input {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 10px;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover { background: var(--accent); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .search-box { margin-top: 20px; }
+
+        .result {
+            background: var(--highlight);
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Cadastro de Atendimento</h2>
+
+    <div class="form-grid">
+        <input type="text" id="nome" placeholder="Nome">
+        <input type="email" id="email" placeholder="E-mail">
+        <input type="text" id="documento" placeholder="CPF/CNPJ">
+        <input type="text" id="motivo" placeholder="Motivo">
+        <input type="text" id="submotivo" placeholder="Sub-Motivo">
+        <input type="date" id="data">
+    </div>
+
+    <button onclick="adicionarRegistro()">Salvar Registro</button>
+
+    <div class="search-box">
+        <h3>Localizar Registro</h3>
+        <input type="text" id="busca" placeholder="Digite Nome, CPF ou Protocolo">
+        <button onclick="buscarRegistro()">Buscar</button>
+        <div class="result" id="resultado"></div>
+    </div>
+
+    <table id="tabela">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>E-mail</th>
+                <th>CPF/CNPJ</th>
+                <th>Motivo</th>
+                <th>Sub-Motivo</th>
+                <th>Data</th>
+                <th>Protocolo</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+    let registros = JSON.parse(localStorage.getItem('registros')) || [];
+
+    function salvarLocalStorage() {
+        localStorage.setItem('registros', JSON.stringify(registros));
+    }
+
+    function gerarProtocolo() {
+        return 'PROTO-' + Math.floor(Math.random() * 1000000);
+    }
+
+    function renderizarTabela() {
+        const tabela = document.querySelector('#tabela tbody');
+        tabela.innerHTML = '';
+
+        registros.forEach(registro => {
+            const linha = tabela.insertRow();
+            Object.values(registro).forEach(valor => {
+                const ce
