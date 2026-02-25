@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro Full Stack</title>
+<style>
+:root { --primary:#6DC3BB; --secondary:#393D7E; --accent:#5459AC; --highlight:#F2AEBB; }
+body { font-family: Arial,sans-serif; background:linear-gradient(135deg,var(--primary),var(--highlight)); padding:20px; }
+.container { background:white; padding:25px; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,0.15); }
+input, button { padding:8px; margin:5px 0; border-radius:5px; border:1px solid #ccc; }
+button { background:var(--secondary); color:white; border:none; cursor:pointer; }
+button:hover { background:var(--accent); }
+table { width:100%; border-collapse:collapse; margin-top:20px; }
+th, td { border:1px solid #ddd; padding:8px; text-align:center; }
+th { background:var(--secondary); color:white; }
+</style>
+</head>
+<body>
+<div class="container">
+<h2>Cadastro Full Stack com Armazenamento Local e Backend</h2>
+<div class="form-grid">
+<input type="text" id="nome" placeholder="Nome">
+<input type="email" id="email" placeholder="E-mail">
+<input type="text" id="documento" placeholder="CPF/CNPJ">
+<input type="text" id="motivo" placeholder="Motivo">
+<input type="text" id="submotivo" placeholder="Sub-Motivo">
+<input type="date" id="data">
+<button onclick="salvarRegistro()">Salvar</button>
+</div>
+
+<div style="margin-top:20px;">
+<input type="text" id="busca" placeholder="Buscar por Nome, CPF ou Protocolo">
+<button onclick="buscarRegistro()">Buscar</button>
+</div>
+
+<table id="tabela">
+<thead>
+<tr><th>Nome</th><th>E-mail</th><th>CPF/CNPJ</th><th>Motivo</th><th>Sub-Motivo</th><th>Data</th><th>Protocolo</th><th>Ações</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<script>
+const API_URL = 'http://localhost:3000/clientes';
+let registros = JSON.parse(localStorage.getItem('registros')) || [];
+
+function salvarLocalStorage() {
+    localStorage.setItem('registros', JSON.stringify(registros));
+}
+
+function gerarProtocolo() { return 'PROTO-' + Math.floor(Math.random() * 1000000); }
+
+function renderizarTabela() {
+    const tbody = document.querySelector('#tabela tbody');
+    tbody.innerHTML = '';
+    registros.forEach((r, index) => {
+        const linha = tbody.insertRow();
+        Object.values(r).forEach(v => linha.insertCell().textContent = v);
+        const celulaAcoes = linha.insertCell();
+        const btnExcluir = document.createElement('button');
+        btnExcluir.textContent = 'Excluir';
+        btnExcluir.style.backgroundColor = '#F44336';
+        btnExcluir.onclick = () => excluirRegistro(index, r.protocolo);
+        celulaAcoes.appendChild(btnExcluir);
+    });
+}
+
+async function salvarRegistro() {
+    const registro = {
+        nome: document.getElementById('nome').value,
+        email: document.getElementById('email').value,
+        documento: document.getElementById('documento').value,
+        motivo: document.getElementById('motivo').value,
+        submotivo: document.getElementById('submotivo').value,
+        data: document.getElementById('data').value,
+        protocolo: gerarProtocolo()
+    };
+
+    registros.push(registro);
+    salvarLocalStorage();
+    renderizarTabela();
+
+    try {
+        await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(registro) });
+    } catch(e) { console.warn('Não foi possível salvar no backend, registro salvo localmente'); }
+
+    alert('Registro salvo com protocolo: ' + registro.protocolo);
+}
+
+async function excluirRegistro(index, protocolo) {
+    if(!confirm('Tem certeza que deseja excluir este registro?')) return;
+    registros.splice(index, 1);
+    salvarLocalStorage();
+    renderizarTabela();
+
+    try {
+        await fetch(`${API_URL}/${protocolo}`, { method:'DELETE' });
+    } catch(e) { console.warn('Não foi possível excluir no backend, registro excluído localmente'); }
+}
+
+async function buscarRegistro() {
+    const termo = document.getElementById('busca').value.toLowerCase();
+    const tbody = document.querySelector('#tabela tbody');
+    tbody.innerHTML = '';
+
+    const localEncontrado = registros.filter(r => r.nome.toLowerCase().includes(termo) || r.documento.includes(termo) || r.protocolo.toLowerCase().includes(termo));
+
+    localEncontrado.forEach((r,index) => {
+        const linha = tbody.insertRow();
+        Object.values(r).forEach(v => linha.insertCell().textContent = v);
+        const celulaAcoes = linha.insertCell();
+        const btnExcluir = document.createElement('button');
+        btnExcluir.textContent = 'Excluir';
+        btnExcluir.style.backgroundColor = '#F44336';
+        btnExcluir.onclick = () => excluirRegistro(index, r.protocolo);
+        celulaAcoes.appendChild(btnExcluir);
+    });
+
+    try {
+        const res = await fetch(`${API_URL}/busca?termo=${encodeURIComponent(termo)}`);
+        const dados = await res.json();
+        dados.forEach(r => {
+            if(!registros.some(lr => lr.protocolo === r.protocolo)) {
+                const linha = tbody.insertRow();
+                Object.values(r).forEach(v => linha.insertCell().textContent = v);
+                const celulaAcoes = linha.insertCell();
+                const btnExcluir = document.createElement('button');
+                btnExcluir.textContent = 'Excluir';
+                btnExcluir.style.backgroundColor = '#F44336';
+                btnExcluir.onclick = () => excluirRegistro(-1, r.protocolo);
+                celulaAcoes.appendChild(btnExcluir);
+            }
+        });
+    } catch(e) { console.warn('Busca no backend falhou'); }
+}
+
+renderizarTabela();
+</script>
+</body>
+</html>
