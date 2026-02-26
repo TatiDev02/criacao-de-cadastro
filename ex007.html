@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro Organizado por Pasta</title>
+<style>
+:root { 
+    --primary:#F875AA; 
+    --secondary:#AEDEFC; 
+}
+body { 
+    font-family: Arial,sans-serif; 
+    background:linear-gradient(135deg,var(--primary),var(--secondary)); 
+    padding:20px; 
+}
+.container { 
+    background:white; 
+    padding:25px; 
+    border-radius:10px; 
+    box-shadow:0 8px 20px rgba(0,0,0,0.15); 
+}
+input, select, button { 
+    padding:8px; 
+    margin:5px 0; 
+    border-radius:5px; 
+    border:1px solid #ccc; 
+}
+button { 
+    background:var(--primary); 
+    color:white; 
+    border:none; 
+    cursor:pointer; 
+}
+button:hover { opacity:0.8; }
+.btn-excluir { background:#d32f2f; }
+table { width:100%; border-collapse:collapse; margin-top:20px; }
+th, td { border:1px solid #ddd; padding:8px; text-align:center; }
+th { background:var(--primary); color:white; }
+.pasta-box {
+    margin-top:15px;
+    padding:10px;
+    background:var(--secondary);
+    border-radius:8px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>Cadastro Organizado por Mês e Ano</h2>
+
+<div>
+<input type="text" id="nome" placeholder="Nome">
+<input type="email" id="email" placeholder="E-mail">
+<input type="text" id="documento" placeholder="CPF/CNPJ">
+<input type="text" id="motivo" placeholder="Motivo">
+<input type="text" id="submotivo" placeholder="Sub-Motivo">
+<input type="date" id="data">
+<input type="text" id="protocolo" placeholder="Protocolo">
+
+<select id="pastaSelect"></select>
+<button onclick="criarPasta()">Criar Pasta (Mês/Ano)</button>
+
+<button onclick="salvarRegistro()">Salvar</button>
+</div>
+
+<div style="margin-top:20px;">
+<input type="text" id="busca" placeholder="Buscar por Nome, CPF ou Protocolo">
+<button onclick="buscarRegistro()">Buscar</button>
+<button onclick="listarRegistros()">Listar Todos</button>
+</div>
+
+<div class="pasta-box">
+<strong>Pasta Atual:</strong> <span id="pastaAtual">Nenhuma</span>
+</div>
+
+<table id="tabela">
+<thead>
+<tr>
+<th>Nome</th>
+<th>E-mail</th>
+<th>CPF/CNPJ</th>
+<th>Motivo</th>
+<th>Sub-Motivo</th>
+<th>Data</th>
+<th>Protocolo</th>
+<th>Pasta</th>
+<th>Ações</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<script>
+let pastas = JSON.parse(localStorage.getItem('pastas')) || [];
+let registros = JSON.parse(localStorage.getItem('registros')) || [];
+
+function salvarLocalStorage() {
+    localStorage.setItem('registros', JSON.stringify(registros));
+    localStorage.setItem('pastas', JSON.stringify(pastas));
+}
+
+function atualizarSelectPastas() {
+    const select = document.getElementById('pastaSelect');
+    select.innerHTML = '';
+    pastas.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p;
+        option.textContent = p;
+        select.appendChild(option);
+    });
+}
+
+function criarPasta() {
+    const mesAno = prompt('Digite a pasta no formato: MM/AAAA (ex: 03/2026)');
+    if(!mesAno) return;
+    if(!pastas.includes(mesAno)) {
+        pastas.push(mesAno);
+        salvarLocalStorage();
+        atualizarSelectPastas();
+        alert('Pasta criada com sucesso!');
+    } else {
+        alert('Essa pasta já existe.');
+    }
+}
+
+function renderizarTabela(lista) {
+    const tbody = document.querySelector('#tabela tbody');
+    tbody.innerHTML = '';
+    lista.forEach(r => {
+        const linha = tbody.insertRow();
+        linha.insertCell().textContent = r.nome;
+        linha.insertCell().textContent = r.email;
+        linha.insertCell().textContent = r.documento;
+        linha.insertCell().textContent = r.motivo;
+        linha.insertCell().textContent = r.submotivo;
+        linha.insertCell().textContent = r.data;
+        linha.insertCell().textContent = r.protocolo;
+        linha.insertCell().textContent = r.pasta;
+
+        const celulaAcoes = linha.insertCell();
+        const btnExcluir = document.createElement('button');
+        btnExcluir.textContent = 'Excluir';
+        btnExcluir.className = 'btn-excluir';
+        btnExcluir.onclick = () => excluirRegistro(r.protocolo);
+        celulaAcoes.appendChild(btnExcluir);
+    });
+}
+
+function salvarRegistro() {
+    const pasta = document.getElementById('pastaSelect').value;
+    if(!pasta) { alert('Selecione uma pasta (Mês/Ano).'); return; }
+
+    const registro = {
+        nome: document.getElementById('nome').value,
+        email: document.getElementById('email').value,
+        documento: document.getElementById('documento').value,
+        motivo: document.getElementById('motivo').value,
+        submotivo: document.getElementById('submotivo').value,
+        data: document.getElementById('data').value,
+        protocolo: document.getElementById('protocolo').value,
+        pasta: pasta
+    };
+
+    registros.push(registro);
+    salvarLocalStorage();
+    renderizarTabela(registros);
+    document.getElementById('pastaAtual').textContent = pasta;
+    alert('Cadastro salvo na pasta ' + pasta);
+}
+
+function excluirRegistro(protocolo) {
+    if(!confirm('Deseja excluir este cadastro?')) return;
+    registros = registros.filter(r => r.protocolo !== protocolo);
+    salvarLocalStorage();
+    renderizarTabela(registros);
+}
+
+function buscarRegistro() {
+    const termo = document.getElementById('busca').value.toLowerCase();
+    const filtrados = registros.filter(r =>
+        r.nome.toLowerCase().includes(termo) ||
+        r.documento.includes(termo) ||
+        r.protocolo.toLowerCase().includes(termo)
+    );
+    renderizarTabela(filtrados);
+}
+
+function listarRegistros() {
+    renderizarTabela(registros);
+}
+
+atualizarSelectPastas();
+renderizarTabela(registros);
+</script>
+</body>
+</html>
