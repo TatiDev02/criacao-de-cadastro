@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema com Pastas e Drag & Drop</title>
+<style>
+:root { 
+    --primary:#F875AA; 
+    --secondary:#AEDEFC; 
+}
+body { 
+    font-family: Arial,sans-serif; 
+    background:linear-gradient(135deg,var(--primary),var(--secondary)); 
+    padding:20px; 
+}
+.container { 
+    background:white; 
+    padding:25px; 
+    border-radius:10px; 
+    box-shadow:0 8px 20px rgba(0,0,0,0.15); 
+}
+input, select, button { 
+    padding:8px; 
+    margin:5px 0; 
+    border-radius:5px; 
+    border:1px solid #ccc; 
+}
+button { 
+    background:var(--primary); 
+    color:white; 
+    border:none; 
+    cursor:pointer; 
+}
+button:hover { opacity:0.85; }
+.btn-excluir { background:#d32f2f; }
+
+.folder {
+    display:inline-block;
+    padding:10px 15px;
+    margin:5px;
+    background:var(--secondary);
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.folder.active {
+    background:var(--primary);
+    color:white;
+}
+
+table { width:100%; border-collapse:collapse; margin-top:20px; }
+th, td { border:1px solid #ddd; padding:8px; text-align:center; }
+th { background:var(--primary); color:white; }
+
+.draggable {
+    cursor:grab;
+}
+
+.drop-hover {
+    outline:3px dashed var(--primary);
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>Sistema Organizado por Pastas (Drag & Drop)</h2>
+
+<div>
+<input type="text" id="nome" placeholder="Nome">
+<input type="email" id="email" placeholder="E-mail">
+<input type="text" id="documento" placeholder="CPF/CNPJ">
+<input type="text" id="motivo" placeholder="Motivo">
+<input type="text" id="submotivo" placeholder="Sub-Motivo">
+<input type="date" id="data">
+<input type="text" id="protocolo" placeholder="Protocolo">
+<button onclick="salvarRegistro()">Salvar</button>
+</div>
+
+<hr>
+
+<h3>Pastas</h3>
+<input type="text" id="novaPasta" placeholder="Ex: 03/2026">
+<button onclick="criarPasta()">Criar Pasta</button>
+<button onclick="mostrarTodos()">Mostrar Todos</button>
+
+<div id="listaPastas"></div>
+
+<hr>
+
+<input type="text" id="busca" placeholder="Buscar por Nome, CPF ou Protocolo">
+<button onclick="buscarRegistro()">Buscar</button>
+
+<table>
+<thead>
+<tr>
+<th>Nome</th>
+<th>Email</th>
+<th>CPF/CNPJ</th>
+<th>Motivo</th>
+<th>Sub-Motivo</th>
+<th>Data</th>
+<th>Protocolo</th>
+<th>Pasta</th>
+<th>Ações</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+
+</div>
+
+<script>
+let pastas = JSON.parse(localStorage.getItem('pastas')) || [];
+let registros = JSON.parse(localStorage.getItem('registros')) || [];
+let pastaAtual = null;
+
+function salvarStorage(){
+    localStorage.setItem('pastas', JSON.stringify(pastas));
+    localStorage.setItem('registros', JSON.stringify(registros));
+}
+
+function criarPasta(){
+    const nome = document.getElementById('novaPasta').value.trim();
+    if(!nome) return alert('Digite o mês/ano da pasta');
+    if(pastas.includes(nome)) return alert('Pasta já existe');
+    pastas.push(nome);
+    salvarStorage();
+    renderPastas();
+    document.getElementById('novaPasta').value='';
+}
+
+function renderPastas(){
+    const div = document.getElementById('listaPastas');
+    div.innerHTML='';
+    pastas.forEach(p=>{
+        const pastaDiv=document.createElement('div');
+        pastaDiv.className='folder'+(p===pastaAtual?' active':'');
+
+        const nomeSpan = document.createElement('span');
+        nomeSpan.textContent = p;
+        nomeSpan.style.marginRight = '10px';
+        nomeSpan.onclick=()=>abrirPasta(p);
+
+        const btnExcluir = document.createElement('button');
+        btnExcluir.textContent = 'X';
+        btnExcluir.style.background = '#d32f2f';
+        btnExcluir.style.padding = '3px 8px';
+        btnExcluir.onclick = (e)=>{
+            e.stopPropagation();
+            excluirPasta(p);
+        };
+
+        pastaDiv.ondragover=(e)=>{
+            e.preventDefault();
+            pastaDiv.classList.add('drop-hover');
+        }
+        pastaDiv.ondragleave=()=>pastaDiv.classList.remove('drop-hover');
+        pastaDiv.ondrop=(e)=>{
+            e.preventDefault();
+            const protocolo=e.dataTransfer.getData('text');
+            moverParaPasta(protocolo,p);
+            pastaDiv.classList.remove('drop-hover');
+        }
+
+        pastaDiv.appendChild(nomeSpan);
+        pastaDiv.appendChild(btnExcluir);
+        div.appendChild(pastaDiv);
+    });
+}
+
+function excluirPasta(nome){
+    if(!confirm('Deseja excluir a pasta? Os clientes ficarão sem pasta.')) return;
+
+    pastas = pastas.filter(p=>p!==nome);
+
+    registros = registros.map(r=>{
+        if(r.pasta===nome){
+            r.pasta = null;
+        }
+        return r;
+    });
+
+    if(pastaAtual===nome) pastaAtual=null;
+
+    salvarStorage();
+    renderPastas();
+    renderTabela(registros);
+}
+
+function abrirPasta(nome){
+    pastaAtual=nome;
+    renderPastas();
+    const filtrados=registros.filter(r=>r.pasta===nome);
+    renderTabela(filtrados);
+}
+
+function mostrarTodos(){
+    pastaAtual=null;
+    renderPastas();
+    renderTabela(registros);
+}
+
+function salvarRegistro(){
+    const protocolo=document.getElementById('protocolo').value.trim();
+    if(!protocolo) return alert('Informe o protocolo');
+
+    registros.push({
+        nome:document.getElementById('nome').value,
+        email:document.getElementById('email').value,
+        documento:document.getElementById('documento').value,
+        motivo:document.getElementById('motivo').value,
+        submotivo:document.getElementById('submotivo').value,
+        data:document.getElementById('data').value,
+        protocolo:protocolo,
+        pasta:pastaAtual
+    });
+
+    salvarStorage();
+    renderTabela(registros);
+}
+
+function renderTabela(lista){
+    const tbody=document.getElementById('tbody');
+    tbody.innerHTML='';
+    lista.forEach(r=>{
+        const tr=document.createElement('tr');
+        tr.className='draggable';
+        tr.draggable=true;
+        tr.ondragstart=(e)=>{
+            e.dataTransfer.setData('text',r.protocolo);
+        }
+
+        tr.innerHTML=`
+            <td>${r.nome||''}</td>
+            <td>${r.email||''}</td>
+            <td>${r.documento||''}</td>
+            <td>${r.motivo||''}</td>
+            <td>${r.submotivo||''}</td>
+            <td>${r.data||''}</td>
+            <td>${r.protocolo}</td>
+            <td>${r.pasta||''}</td>
+            <td><button class='btn-excluir' onclick="excluirRegistro('${r.protocolo}')">Excluir</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function moverParaPasta(protocolo,pastaDestino){
+    registros=registros.map(r=>{
+        if(r.protocolo===protocolo){
+            r.pasta=pastaDestino;
+        }
+        return r;
+    });
+    salvarStorage();
+    if(pastaAtual){
+        abrirPasta(pastaAtual);
+    }else{
+        renderTabela(registros);
+    }
+}
+
+function excluirRegistro(protocolo){
+    if(!confirm('Deseja excluir?')) return;
+    registros=registros.filter(r=>r.protocolo!==protocolo);
+    salvarStorage();
+    renderTabela(registros);
+}
+
+function buscarRegistro(){
+    const termo=document.getElementById('busca').value.toLowerCase();
+    const filtrados=registros.filter(r=>
+        (r.nome||'').toLowerCase().includes(termo)||
+        (r.documento||'').includes(termo)||
+        (r.protocolo||'').toLowerCase().includes(termo)
+    );
+    renderTabela(filtrados);
+}
+
+renderPastas();
+renderTabela(registros);
+</script>
+</body>
+</html>
